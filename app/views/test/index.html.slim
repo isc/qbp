@@ -1,0 +1,16 @@
+.row
+  .col-3
+    button.btn.btn-primary.btn-block.my-2 onclick="toggleLiveInput()" Start / stop
+    #detector.vague
+    	.pitch
+        span#pitch> --
+        ' Hz
+    	.note
+        span#note --
+    	canvas#output width=300 height=42
+    	#detune
+        span#detune_amt --
+        span#flat cents &#9837;
+        span#sharp cents &#9839;
+  .col
+    #paper
