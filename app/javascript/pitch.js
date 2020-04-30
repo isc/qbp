@@ -18,6 +18,7 @@ const pitchDetectionAlgorithm = 'mcleod'
 let previousValue = null
 let pitchValues = null
 let rmsValues = null
+let currentNote
 
 window.onload = function () {
   document.querySelector('#mic').onclick = toggleLiveInput
@@ -69,10 +70,15 @@ function drawLineCharts() {
   lineChart(rmsValues, 'blue', 0, 'rms-line')
 }
 
-function togglePlayback() {
+function initialize() {
   currentScore = 'X:1\nL:1/4\n'
   pitchValues = []
   rmsValues = []
+  currentNote = []
+}
+
+function togglePlayback() {
+  initialize()
   audioContext = new AudioContext()
   var request = new XMLHttpRequest()
   request.open('GET', '/whistling.ogg', true)
@@ -95,16 +101,14 @@ function togglePlayback() {
 
 function toggleLiveInput() {
   if (isPlaying) {
+    window.cancelAnimationFrame(rafID)
     analyser = null
     isPlaying = false
-    window.cancelAnimationFrame(rafID)
     drawLineCharts()
     return
   }
   isPlaying = true
-  currentScore = 'X:1\nL:1/4\n'
-  pitchValues = []
-  rmsValues = []
+  initialize()
   getUserMedia(
     {
       audio: {
@@ -145,6 +149,17 @@ function updatePitch(time) {
   rmsValues.push(rms)
 
   if (ac == -1 || !ac) {
+    if (currentNote.length) {
+      let sum = 0
+      for (var i = 0; i < currentNote.length; i++) {
+        sum += currentNote[i]
+      }
+      const avg = sum / currentNote.length
+      var note = noteFromPitch(avg)
+      currentScore += abcNoteStrings[note % 12]
+      abcjs.renderAbc('paper', currentScore)
+      currentNote = []
+    }
     previousValue = -1
     detectorElem.className = 'vague'
     pitchElem.innerText = '--'
@@ -153,17 +168,12 @@ function updatePitch(time) {
     detuneAmount.innerText = '--'
     pitchValues.push(0)
   } else {
+    currentNote.push(ac)
     detectorElem.className = 'confident'
-    const pitch = ac
-    pitchElem.innerText = Math.round(pitch)
-    var note = noteFromPitch(pitch)
+    pitchElem.innerText = Math.round(ac)
+    var note = noteFromPitch(ac)
     pitchValues.push(note)
     noteElem.innerHTML = noteStrings[note % 12]
-    console.log(noteElem.innerHTML)
-    if (previousValue !== note) {
-      currentScore += abcNoteStrings[note % 12]
-      abcjs.renderAbc('paper', currentScore)
-    }
     previousValue = note
   }
 
