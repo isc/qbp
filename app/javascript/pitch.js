@@ -1,3 +1,4 @@
+import { PitchDetector } from 'pitchy'
 import abcjs from 'abcjs'
 
 var currentScore = 'X:1\nL:1/4\n'
@@ -6,9 +7,12 @@ var isPlaying = false
 var analyser = null
 var mediaStreamSource = null
 var detectorElem, pitchElem, noteElem, detuneElem, detuneAmount
+const detector = PitchDetector.forFloat32Array(2048)
+const input = new Float32Array(detector.inputLength)
 
 window.onload = function () {
-  document.querySelector('button').onclick = toggleLiveInput
+  document.querySelector('#mic').onclick = toggleLiveInput
+  document.querySelector('#ogg').onclick = togglePlayback
   detectorElem = document.getElementById('detector')
   pitchElem = document.getElementById('pitch')
   noteElem = document.getElementById('note')
@@ -32,6 +36,26 @@ function gotStream(stream) {
   analyser.fftSize = 2048
   mediaStreamSource.connect(analyser)
   updatePitch()
+}
+
+function togglePlayback() {
+  audioContext = new AudioContext()
+  var request = new XMLHttpRequest()
+  request.open('GET', '/whistling.ogg', true)
+  request.responseType = 'arraybuffer'
+  request.onload = function () {
+    audioContext.decodeAudioData(request.response, function (buffer) {
+      const sourceNode = audioContext.createBufferSource()
+      sourceNode.buffer = buffer
+      analyser = audioContext.createAnalyser()
+      analyser.fftSize = 2048
+      sourceNode.connect(analyser)
+      analyser.connect(audioContext.destination)
+      sourceNode.start(0)
+      updatePitch()
+    })
+  }
+  request.send()
 }
 
 function toggleLiveInput() {
@@ -141,11 +165,15 @@ function autoCorrelate(buf, sampleRate) {
 
 let previousValue = null
 function updatePitch(time) {
-  var cycles = new Array()
-  analyser.getFloatTimeDomainData(buf)
-  var ac = autoCorrelate(buf, audioContext.sampleRate)
+  // analyser.getFloatTimeDomainData(buf)
+  // var ac = autoCorrelate(buf, audioContext.sampleRate)
+  analyser.getFloatTimeDomainData(input)
+  const [pitch, clarity] = detector.findPitch(input, audioContext.sampleRate)
+  var ac = clarity > 0.95 ? pitch : -1
+  console.log(ac)
 
-  if (ac == -1) {
+  if (ac == -1 || !ac) {
+    previousValue = -1
     detectorElem.className = 'vague'
     pitchElem.innerText = '--'
     noteElem.innerText = '-'
@@ -158,20 +186,13 @@ function updatePitch(time) {
     var note = noteFromPitch(pitch)
     noteElem.innerHTML = noteStrings[note % 12]
     console.log(noteElem.innerHTML)
-    if (previousValue === -1) {
+
+    if (previousValue !== note) {
       currentScore += abcNoteStrings[note % 12]
       abcjs.renderAbc('paper', currentScore)
     }
-    var detune = centsOffFromPitch(pitch, note)
-    if (detune == 0) {
-      detuneElem.className = ''
-      detuneAmount.innerHTML = '--'
-    } else {
-      if (detune < 0) detuneElem.className = 'flat'
-      else detuneElem.className = 'sharp'
-      detuneAmount.innerHTML = Math.abs(detune)
-    }
+    previousValue = note
   }
-  previousValue = ac
+
   rafID = window.requestAnimationFrame(updatePitch)
 }
