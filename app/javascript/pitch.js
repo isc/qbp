@@ -1,6 +1,7 @@
 import { PitchDetector } from 'pitchy'
 import abcjs from 'abcjs'
 import autoCorrelate from './autocorrelate'
+import Chart from "chart.js/dist/Chart.min";
 
 var currentScore = 'X:1\nL:1/4\n'
 var audioContext = null
@@ -21,6 +22,8 @@ let pitchValues = null
 let rmsValues = null
 let currentNote
 let sourceNode
+let redLine = ['rgba(255, 99, 132, 0.2)', 'rgba(255, 99, 132, 1)']
+let blueLine = ['rgba(54, 162, 235, 0.2)', 'rgba(54, 162, 235, 1)']
 
 window.onload = function () {
   document.querySelector('#mic').onclick = toggleLiveInput
@@ -30,6 +33,8 @@ window.onload = function () {
   pitchElem = document.getElementById('pitch')
   noteElem = document.getElementById('note')
   abcjs.renderAbc('paper', currentScore)
+
+
 }
 
 function getUserMedia(dictionary, callback) {
@@ -49,26 +54,53 @@ function gotStream(stream) {
   updatePitch()
 }
 
-function lineChart(values, color, canvasId) {
-  const canvas = document.getElementById(canvasId)
-  const context = canvas.getContext('2d')
-  context.clearRect(0, 0, canvas.width, canvas.height)
-  const min = Math.max(Math.min(...values.filter((v) => v !== 0)) - 1, 0)
-  const ambitus = Math.max(...values) - min
-  let value
-  context.lineWidth = 1.5
-  context.strokeStyle = color
-  context.beginPath()
-  for (var i = 0; i < values.length; i++) {
-    value = Math.max(values[i], min)
-    context.lineTo((i / values.length) * canvas.width, canvas.height - ((value - min) / ambitus) * canvas.height)
+function lineChart(values, elementId, colors) {
+  var ctx = document.getElementById(elementId).getContext('2d');
+  // Fake x-axis Data
+  var xaxis = []
+  for (var i = 0; i <= values.length; i++) {
+    xaxis[i] = i
   }
-  context.stroke()
+  var myChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+          labels: xaxis,
+          datasets: [{
+            backgroundColor: colors[0],
+            borderColor: colors[1],
+            data: values,
+          }]
+      },
+      options: {
+        legend: {
+          display: false
+        },
+        title: {
+            display: true,
+            text: elementId
+        },
+        elements: {
+          point:{
+            radius: 0
+          }
+        },
+        scales: {
+          xAxes: [{
+            gridLines: {
+              display:false
+            },
+            ticks: {
+              display: false
+            }
+          }]
+        }
+      },
+  });
 }
 
 function drawLineCharts() {
-  lineChart(pitchValues, 'red', 'pitch-line')
-  lineChart(rmsValues, 'blue', 'rms-line')
+  lineChart(pitchValues, 'pitch-graph', blueLine)
+  lineChart(rmsValues, 'rms-graph', redLine)
 }
 
 function initialize() {
