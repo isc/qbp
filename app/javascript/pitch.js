@@ -103,6 +103,7 @@ function togglePlayback() {
       sourceNode.start(0)
       sourceNode.onended = drawLineCharts
       updatePitch()
+      togglePlaybackButton.innerHTML = 'Start'
     })
   }
   request.send()
