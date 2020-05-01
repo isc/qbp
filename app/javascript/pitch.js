@@ -49,26 +49,26 @@ function gotStream(stream) {
   updatePitch()
 }
 
-function lineChart(values, color, minValue, canvasId) {
+function lineChart(values, color, canvasId) {
   const canvas = document.getElementById(canvasId)
   const context = canvas.getContext('2d')
   context.clearRect(0, 0, canvas.width, canvas.height)
-  const min = Math.max(Math.min(...values), minValue)
+  const min = Math.max(Math.min(...values.filter((v) => v !== 0)) - 1, 0)
   const ambitus = Math.max(...values) - min
   let value
   context.lineWidth = 1.5
   context.strokeStyle = color
   context.beginPath()
   for (var i = 0; i < values.length; i++) {
-    value = Math.max(values[i], minValue)
+    value = Math.max(values[i], min)
     context.lineTo((i / values.length) * canvas.width, canvas.height - ((value - min) / ambitus) * canvas.height)
   }
   context.stroke()
 }
 
 function drawLineCharts() {
-  lineChart(pitchValues, 'red', 60, 'pitch-line')
-  lineChart(rmsValues, 'blue', 0, 'rms-line')
+  lineChart(pitchValues, 'red', 'pitch-line')
+  lineChart(rmsValues, 'blue', 'rms-line')
 }
 
 function initialize() {
