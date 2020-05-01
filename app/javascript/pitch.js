@@ -101,9 +101,12 @@ function togglePlayback() {
       sourceNode.connect(analyser)
       analyser.connect(audioContext.destination)
       sourceNode.start(0)
-      sourceNode.onended = drawLineCharts
+      sourceNode.onended = () => {
+        drawLineCharts()
+        togglePlaybackButton.innerHTML = 'Start'
+        isPlaying = false
+      }
       updatePitch()
-      togglePlaybackButton.innerHTML = 'Start'
     })
   }
   request.send()
