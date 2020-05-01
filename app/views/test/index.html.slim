@@ -1,7 +1,15 @@
 .row
   .col-3
     button.btn.btn-primary.btn-block.my-2#mic Microphone
-    button.btn.btn-primary.btn-block.my-2#ogg Ogg file
+    .row
+      .col
+        select.form-control.my-2
+          option value="piano.mp3" Piano
+          option value="guitar.mp3" Guitar
+          option value="flute.mp3" Flute
+          option value="whistling.ogg" Whistling
+      .col
+        button.btn.btn-primary.btn-block.my-2#sample Start
     #detector.vague
     	.pitch
         span#pitch> --

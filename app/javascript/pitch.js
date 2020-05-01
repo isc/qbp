@@ -7,7 +7,8 @@ var audioContext = null
 var isPlaying = false
 var analyser = null
 var mediaStreamSource = null
-var detectorElem, pitchElem, noteElem, detuneElem, detuneAmount
+var detectorElem, pitchElem, noteElem
+let togglePlaybackButton
 const inputLength = 2048
 const detector = PitchDetector.forFloat32Array(inputLength)
 const input = new Float32Array(detector.inputLength)
@@ -19,15 +20,15 @@ let previousValue = null
 let pitchValues = null
 let rmsValues = null
 let currentNote
+let sourceNode
 
 window.onload = function () {
   document.querySelector('#mic').onclick = toggleLiveInput
-  document.querySelector('#ogg').onclick = togglePlayback
+  togglePlaybackButton = document.querySelector('#sample')
+  togglePlaybackButton.onclick = togglePlayback
   detectorElem = document.getElementById('detector')
   pitchElem = document.getElementById('pitch')
   noteElem = document.getElementById('note')
-  detuneElem = document.getElementById('detune')
-  detuneAmount = document.getElementById('detune_amt')
   abcjs.renderAbc('paper', currentScore)
 }
 
@@ -48,26 +49,26 @@ function gotStream(stream) {
   updatePitch()
 }
 
-function lineChart(values, color, minValue, canvasId) {
+function lineChart(values, color, canvasId) {
   const canvas = document.getElementById(canvasId)
   const context = canvas.getContext('2d')
   context.clearRect(0, 0, canvas.width, canvas.height)
-  const min = Math.max(Math.min(...values), minValue)
+  const min = Math.max(Math.min(...values.filter((v) => v !== 0)) - 1, 0)
   const ambitus = Math.max(...values) - min
   let value
   context.lineWidth = 1.5
   context.strokeStyle = color
   context.beginPath()
   for (var i = 0; i < values.length; i++) {
-    value = Math.max(values[i], minValue)
+    value = Math.max(values[i], min)
     context.lineTo((i / values.length) * canvas.width, canvas.height - ((value - min) / ambitus) * canvas.height)
   }
   context.stroke()
 }
 
 function drawLineCharts() {
-  lineChart(pitchValues, 'red', 60, 'pitch-line')
-  lineChart(rmsValues, 'blue', 0, 'rms-line')
+  lineChart(pitchValues, 'red', 'pitch-line')
+  lineChart(rmsValues, 'blue', 'rms-line')
 }
 
 function initialize() {
@@ -78,21 +79,33 @@ function initialize() {
 }
 
 function togglePlayback() {
+  if (isPlaying) {
+    sourceNode.stop()
+    togglePlaybackButton.innerHTML = 'Start'
+    isPlaying = false
+    return
+  }
+  isPlaying = true
+  togglePlaybackButton.innerHTML = 'Stop'
   initialize()
   audioContext = new AudioContext()
   var request = new XMLHttpRequest()
-  request.open('GET', '/whistling.ogg', true)
+  request.open('GET', document.querySelector('select').value, true)
   request.responseType = 'arraybuffer'
   request.onload = function () {
     audioContext.decodeAudioData(request.response, function (buffer) {
-      const sourceNode = audioContext.createBufferSource()
+      sourceNode = audioContext.createBufferSource()
       sourceNode.buffer = buffer
       analyser = audioContext.createAnalyser()
       analyser.fftSize = 2048
       sourceNode.connect(analyser)
       analyser.connect(audioContext.destination)
       sourceNode.start(0)
-      sourceNode.onended = drawLineCharts
+      sourceNode.onended = () => {
+        drawLineCharts()
+        togglePlaybackButton.innerHTML = 'Start'
+        isPlaying = false
+      }
       updatePitch()
     })
   }
@@ -164,8 +177,6 @@ function updatePitch(time) {
     detectorElem.className = 'vague'
     pitchElem.innerText = '--'
     noteElem.innerText = '-'
-    detuneElem.className = ''
-    detuneAmount.innerText = '--'
     pitchValues.push(0)
   } else {
     currentNote.push(ac)
