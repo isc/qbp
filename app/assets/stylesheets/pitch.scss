@@ -47,8 +47,10 @@ div.vague {
   stroke: red;
   stroke-width: 2px;
 }
-
 #rms-line .ct-line {
   stroke: blue;
   stroke-width: 2px;
+}
+#rms-line .ct-area {
+  fill: blue;
 }

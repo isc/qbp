@@ -155,17 +155,15 @@ function updatePitch(time) {
   rmsValues.push(rms)
 
   if (ac == -1 || !ac) {
-    if (currentNote.length) {
+    if (currentNote.length > 3) {
       let sum = 0
-      for (var i = 0; i < currentNote.length; i++) {
-        sum += currentNote[i]
-      }
+      for (var i = 0; i < currentNote.length; i++) sum += currentNote[i]
       const avg = sum / currentNote.length
       var note = noteFromPitch(avg)
       currentScore += abcNoteStrings[note % 12]
       abcjs.renderAbc('paper', currentScore)
-      currentNote = []
     }
+    currentNote = []
     previousValue = -1
     detectorElem.className = 'vague'
     pitchElem.innerText = '--'
