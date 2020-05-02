@@ -18,7 +18,6 @@ var rafID = null
 var noteStrings = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 var abcNoteStrings = ['C', '^C', 'D', '^D', 'E', 'F', '^F', 'G', '^G', 'A', '^A', 'B']
 const pitchDetectionAlgorithm = 'mcleod'
-let previousValue = null
 let pitchValues = null
 let rmsValues = null
 let currentNote
@@ -55,7 +54,7 @@ function lineChart(values, canvasId) {
   new Chartist.Line(
     canvasId,
     { series: [values] },
-    { lineSmooth: false, showPoint: false, height: 200, showArea: true }
+    { lineSmooth: false, showPoint: false, height: 200, showArea: true, axisX: { showGrid: false } }
   )
 }
 
@@ -71,13 +70,17 @@ function initialize() {
   currentNote = []
 }
 
+function stopPlayback() {
+  appendCurrentNote()
+  sourceNode.stop()
+  drawLineCharts()
+  window.cancelAnimationFrame(rafID)
+  togglePlaybackButton.innerHTML = 'Start'
+  isPlaying = false
+}
+
 function togglePlayback() {
-  if (isPlaying) {
-    sourceNode.stop()
-    togglePlaybackButton.innerHTML = 'Start'
-    isPlaying = false
-    return
-  }
+  if (isPlaying) return stopPlayback()
   isPlaying = true
   togglePlaybackButton.innerHTML = 'Stop'
   initialize()
@@ -94,11 +97,7 @@ function togglePlayback() {
       sourceNode.connect(analyser)
       analyser.connect(audioContext.destination)
       sourceNode.start(0)
-      sourceNode.onended = () => {
-        drawLineCharts()
-        togglePlaybackButton.innerHTML = 'Start'
-        isPlaying = false
-      }
+      sourceNode.onended = stopPlayback
       updatePitch()
     })
   }
@@ -136,6 +135,16 @@ function noteFromPitch(frequency) {
   return Math.round(noteNum) + 69
 }
 
+function appendCurrentNote() {
+  if (currentNote.length <= 3) return
+  let sum = 0
+  for (var i = 0; i < currentNote.length; i++) sum += currentNote[i]
+  const avg = sum / currentNote.length
+  var note = noteFromPitch(avg)
+  currentScore += abcNoteStrings[note % 12]
+  abcjs.renderAbc('paper', currentScore)
+}
+
 function updatePitch(time) {
   let ac
   if (pitchDetectionAlgorithm === 'mcleod') {
@@ -147,24 +156,13 @@ function updatePitch(time) {
     ac = autoCorrelate(input, audioContext.sampleRate)
   }
   let rms = 0
-  for (var i = 0; i < inputLength; i++) {
-    var val = input[i]
-    rms += val * val
-  }
+  for (var i = 0; i < inputLength; i++) rms += input[i] * input[i]
   rms = Math.sqrt(rms / inputLength)
   rmsValues.push(rms)
 
   if (ac == -1 || !ac) {
-    if (currentNote.length > 3) {
-      let sum = 0
-      for (var i = 0; i < currentNote.length; i++) sum += currentNote[i]
-      const avg = sum / currentNote.length
-      var note = noteFromPitch(avg)
-      currentScore += abcNoteStrings[note % 12]
-      abcjs.renderAbc('paper', currentScore)
-    }
+    appendCurrentNote()
     currentNote = []
-    previousValue = -1
     detectorElem.className = 'vague'
     pitchElem.innerText = '--'
     noteElem.innerText = '-'
@@ -176,8 +174,6 @@ function updatePitch(time) {
     var note = noteFromPitch(ac)
     pitchValues.push(note)
     noteElem.innerHTML = noteStrings[note % 12]
-    previousValue = note
   }
-
   rafID = window.requestAnimationFrame(updatePitch)
 }
