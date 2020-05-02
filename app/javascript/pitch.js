@@ -1,6 +1,8 @@
 import { PitchDetector } from 'pitchy'
 import abcjs from 'abcjs'
 import autoCorrelate from './autocorrelate'
+import Chartist from 'chartist'
+import 'chartist/dist/scss/chartist'
 
 var currentScore = 'X:1\nL:1/4\n'
 var audioContext = null
@@ -49,26 +51,17 @@ function gotStream(stream) {
   updatePitch()
 }
 
-function lineChart(values, color, canvasId) {
-  const canvas = document.getElementById(canvasId)
-  const context = canvas.getContext('2d')
-  context.clearRect(0, 0, canvas.width, canvas.height)
-  const min = Math.max(Math.min(...values.filter((v) => v !== 0)) - 1, 0)
-  const ambitus = Math.max(...values) - min
-  let value
-  context.lineWidth = 1.5
-  context.strokeStyle = color
-  context.beginPath()
-  for (var i = 0; i < values.length; i++) {
-    value = Math.max(values[i], min)
-    context.lineTo((i / values.length) * canvas.width, canvas.height - ((value - min) / ambitus) * canvas.height)
-  }
-  context.stroke()
+function lineChart(values, canvasId) {
+  new Chartist.Line(
+    canvasId,
+    { series: [values] },
+    { lineSmooth: false, showPoint: false, height: 200, showArea: true }
+  )
 }
 
 function drawLineCharts() {
-  lineChart(pitchValues, 'red', 'pitch-line')
-  lineChart(rmsValues, 'blue', 'rms-line')
+  lineChart(pitchValues, '#pitch-line')
+  lineChart(rmsValues, '#rms-line')
 }
 
 function initialize() {
@@ -162,22 +155,20 @@ function updatePitch(time) {
   rmsValues.push(rms)
 
   if (ac == -1 || !ac) {
-    if (currentNote.length) {
+    if (currentNote.length > 3) {
       let sum = 0
-      for (var i = 0; i < currentNote.length; i++) {
-        sum += currentNote[i]
-      }
+      for (var i = 0; i < currentNote.length; i++) sum += currentNote[i]
       const avg = sum / currentNote.length
       var note = noteFromPitch(avg)
       currentScore += abcNoteStrings[note % 12]
       abcjs.renderAbc('paper', currentScore)
-      currentNote = []
     }
+    currentNote = []
     previousValue = -1
     detectorElem.className = 'vague'
     pitchElem.innerText = '--'
     noteElem.innerText = '-'
-    pitchValues.push(0)
+    pitchValues.push(null)
   } else {
     currentNote.push(ac)
     detectorElem.className = 'confident'
