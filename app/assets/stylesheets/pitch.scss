@@ -42,3 +42,13 @@ div.vague {
 .sharp #sharp {
   display: inline;
 }
+
+#pitch-line .ct-line {
+  stroke: red;
+  stroke-width: 2px;
+}
+
+#rms-line .ct-line {
+  stroke: blue;
+  stroke-width: 2px;
+}
