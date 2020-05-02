@@ -170,7 +170,7 @@ function updatePitch(time) {
     detectorElem.className = 'vague'
     pitchElem.innerText = '--'
     noteElem.innerText = '-'
-    pitchValues.push(0)
+    pitchValues.push(null)
   } else {
     currentNote.push(ac)
     detectorElem.className = 'confident'
