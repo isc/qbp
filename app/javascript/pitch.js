@@ -39,10 +39,14 @@ function drawLineCharts() {
 }
 
 function initialize() {
+  isPlaying = true
   currentScore = 'X:1\nL:1/4\n'
+  abcjs.renderAbc('paper', currentScore)
   pitchValues = []
   rmsValues = []
   currentNote = []
+  document.querySelector('#pitch-line').innerHTML = ''
+  document.querySelector('#rms-line').innerHTML = ''
 }
 
 function noteFromPitch(frequency) {
@@ -51,9 +55,15 @@ function noteFromPitch(frequency) {
 }
 
 function appendCurrentNote() {
-  if (currentNote.length <= 3) return
+  if (currentNote.length <= 3) {
+    for (var i = 0; i < currentNote.length; i++) pitchValues.push(null)
+    return
+  }
   let sum = 0
-  for (let i = 0; i < currentNote.length; i += 1) sum += currentNote[i]
+  for (let i = 0; i < currentNote.length; i++) {
+    sum += currentNote[i]
+    pitchValues.push(noteFromPitch(currentNote[i]))
+  }
   const avg = sum / currentNote.length
   currentScore += abcNoteStrings[noteFromPitch(avg) % 12]
   abcjs.renderAbc('paper', currentScore)
@@ -70,7 +80,7 @@ function updatePitch() {
     ac = autoCorrelate(input, audioContext.sampleRate)
   }
   let rms = 0
-  for (let i = 0; i < inputLength; i += 1) rms += input[i] * input[i]
+  for (let i = 0; i < inputLength; i++) rms += input[i] * input[i]
   rms = Math.sqrt(rms / inputLength)
   rmsValues.push(rms)
 
@@ -86,7 +96,6 @@ function updatePitch() {
     detectorElem.className = 'confident'
     pitchElem.innerText = Math.round(ac)
     const note = noteFromPitch(ac)
-    pitchValues.push(note)
     noteElem.innerHTML = noteStrings[note % 12]
   }
   rafID = window.requestAnimationFrame(updatePitch)
@@ -123,7 +132,6 @@ function togglePlayback() {
     stopPlayback()
     return
   }
-  isPlaying = true
   togglePlaybackButton.innerHTML = 'Stop'
   initialize()
   audioContext = new AudioContext()
@@ -154,7 +162,6 @@ function toggleLiveInput() {
     drawLineCharts()
     return
   }
-  isPlaying = true
   initialize()
   getUserMedia(
     {
