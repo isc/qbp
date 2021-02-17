@@ -56,11 +56,11 @@ function noteFromPitch(frequency) {
 
 function appendCurrentNote() {
   if (currentNote.length <= 3) {
-    for (var i = 0; i < currentNote.length; i++) pitchValues.push(null)
+    for (let i = 0; i < currentNote.length; i += 1) pitchValues.push(null)
     return
   }
   let sum = 0
-  for (let i = 0; i < currentNote.length; i++) {
+  for (let i = 0; i < currentNote.length; i += 1) {
     sum += currentNote[i]
     pitchValues.push(noteFromPitch(currentNote[i]))
   }
@@ -80,7 +80,7 @@ function updatePitch() {
     ac = autoCorrelate(input, audioContext.sampleRate)
   }
   let rms = 0
-  for (let i = 0; i < inputLength; i++) rms += input[i] * input[i]
+  for (let i = 0; i < inputLength; i += 1) rms += input[i] * input[i]
   rms = Math.sqrt(rms / inputLength)
   rmsValues.push(rms)
 
@@ -99,15 +99,6 @@ function updatePitch() {
     noteElem.innerHTML = noteStrings[note % 12]
   }
   rafID = window.requestAnimationFrame(updatePitch)
-}
-
-function getUserMedia(dictionary, callback) {
-  audioContext = new AudioContext()
-  try {
-    navigator.getUserMedia(dictionary, callback, () => alert('Stream generation failed.'))
-  } catch (e) {
-    alert(`getUserMedia threw exception :${e}`)
-  }
 }
 
 function gotStream(stream) {
@@ -163,20 +154,15 @@ function toggleLiveInput() {
     return
   }
   initialize()
-  getUserMedia(
-    {
-      audio: {
-        mandatory: {
-          googEchoCancellation: 'false',
-          googAutoGainControl: 'false',
-          googNoiseSuppression: 'false',
-          googHighpassFilter: 'false',
-        },
-        optional: [],
-      },
-    },
-    gotStream
-  )
+  audioContext = new AudioContext()
+  try {
+    navigator.mediaDevices
+      .getUserMedia({ audio: { channelCount: 1 } })
+      .then(gotStream)
+      .catch(() => alert('Stream generation failed.'))
+  } catch (e) {
+    alert(`getUserMedia threw exception :${e}`)
+  }
 }
 
 window.onload = () => {
